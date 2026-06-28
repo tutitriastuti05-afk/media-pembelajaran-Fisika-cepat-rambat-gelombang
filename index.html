@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelombang Bunyi - Media Pembelajaran</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MQTT.js CDN untuk komunikasi real-time antar-HP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <!-- Chart.js CDN untuk Analisis Grafik Praktikum -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- MathJax Configuration & Library for Beautiful LaTeX Formula Rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#1E3A8A', // Biru Tua
+                            lightblue: '#3B82F6', // Biru Terang
+                            yellow: '#F59E0B', // Kuning Aksen
+                            lightyellow: '#FEF08A', // Kuning Muda
+                            dark: '#0F172A' // Gelap modern
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Custom scrollbar for desktop elements */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 3px;
+        }
+        /* Animation pulse effect for tutorial guide */
+        @keyframes pulse-highlight {
+            0%, 100% { outline: 3px solid transparent; }
+            50% { outline: 4px solid #F59E0B; box-shadow: 0 0 15px #F59E0B; }
+        }
+        .tut-active {
+            animation: pulse-highlight 1.5s infinite;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col min-h-screen">
+
+    <!-- DESKTOP NAVBAR (Hidden on Mobile) -->
+    <header class="hidden md:flex bg-brand-blue text-white py-4 px-6 items-center justify-between shadow-md sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <div class="bg-brand-yellow text-brand-blue p-2 rounded-lg font-black text-lg">
+                <i class="fa-solid fa-wave-square"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-sm uppercase tracking-wider">Cepat Rambat Gelombang Bunyi</h1>
+                <p class="text-[10px] text-blue-200">Aplikasi Media Pembelajaran Interaktif</p>
+            </div>
+        </div>
+        <nav class="flex gap-2">
+            <button id="nav-home" onclick="switchTab('home')" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-brand-lightblue/20 text-white">
+                <i class="fa-solid fa-house text-brand-yellow"></i> Beranda
+            </button>
+            <button id="nav-materi" onclick="switchTab('materi')" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 hover:bg-white/10">
+                <i class="fa-solid fa-book-open text-brand-yellow"></i> Materi
+            </button>
+            <button id="nav-simulasi" onclick="switchTab('simulasi')" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 hover:bg-white/10">
+                <i class="fa-solid fa-sliders text-brand-yellow"></i> Simulasi
+            </button>
+            <button id="nav-sensor" onclick="switchTab('sensor')" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 hover:bg-white/10">
+                <i class="fa-solid fa-microphone text-brand-yellow"></i> Sensor & Jurnal
+            </button>
+            <button id="nav-kuis" onclick="switchTab('kuis')" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 hover:bg-white/10">
+                <i class="fa-solid fa-graduation-cap text-brand-yellow"></i> Kuis Evaluasi
+            </button>
+        </nav>
+    </header>
+
+    <!-- MOBILE TOP BAR (Hidden on Desktop) -->
+    <div class="md:hidden bg-brand-blue text-white py-3 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-wave-square text-brand-yellow text-base"></i>
+            <span class="font-black text-xs uppercase tracking-wide">Gelombang Bunyi</span>
+        </div>
+        <div class="text-[9px] bg-brand-yellow text-brand-blue font-extrabold px-2.5 py-1 rounded-full shadow-sm">
+            Eksperimen Riil
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-8">
+
+        <!-- TAB: HOME / DASHBOARD -->
+        <div id="tab-home" class="tab-content active space-y-6">
+            <!-- Hero Welcome Card -->
+            <div class="bg-gradient-to-br from-brand-blue via-blue-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg space-y-4 text-center relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 text-[110px] text-white/5 font-black pointer-events-none">
+                    <i class="fa-solid fa-wave-square"></i>
+                </div>
+                
+                <div class="inline-flex bg-brand-yellow text-brand-blue p-3.5 rounded-full text-2xl shadow-md mx-auto animate-bounce">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
+                
+                <div class="space-y-1">
+                    <h2 class="text-lg md:text-2xl font-black uppercase tracking-wider leading-tight">Cepat Rambat Gelombang Bunyi</h2>
+                    <p class="text-[10px] md:text-xs text-blue-200 tracking-wide font-medium">Aplikasi Media Pembelajaran Interaktif & Praktikum Digital Terpadu</p>
+                </div>
+
+                <!-- Kelompok Pengembang Badge inside Hero -->
+                <div class="pt-3 border-t border-white/10 flex flex-col items-center gap-1">
+                    <span class="text-[9px] text-blue-300 font-bold uppercase tracking-wider">Dikembangkan Oleh Kelompok:</span>
+                    <div class="flex flex-wrap justify-center gap-2 text-[10px] font-bold text-white mt-1">
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/5 whitespace-nowrap"><i class="fa-solid fa-user-graduate text-brand-yellow mr-1"></i> Tri Astuti</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/5 whitespace-nowrap"><i class="fa-solid fa-user-graduate text-brand-yellow mr-1"></i> Nazla Kamilatunnisa</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full border border-white/5 whitespace-nowrap"><i class="fa-solid fa-user-graduate text-brand-yellow mr-1"></i> Noval Ramdanih</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Grid Menu Shortcuts -->
+            <div class="space-y-3">
+                <h3 class="font-extrabold text-[10px] text-slate-500 uppercase tracking-widest px-1">Menu Pembelajaran</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Shortcut Card 1: Materi -->
+                    <button onclick="switchTab('materi')" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col text-left justify-between h-32 transition hover:border-brand-lightblue active:scale-95 group">
+                        <div class="bg-blue-50 text-brand-lightblue p-2.5 rounded-xl text-xs transition group-hover:bg-brand-blue group-hover:text-white inline-block">
+                            <i class="fa-solid fa-book-open"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-xs text-brand-blue">Baca Materi</h4>
+                            <p class="text-[9px] text-slate-500 mt-0.5 leading-relaxed">Konsep dasar, teori medium, klasifikasi, dan parameter bunyi.</p>
+                        </div>
+                    </button>
+
+                    <!-- Shortcut Card 2: Simulasi -->
+                    <button onclick="switchTab('simulasi')" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col text-left justify-between h-32 transition hover:border-brand-lightblue active:scale-95 group">
+                        <div class="bg-amber-50 text-brand-yellow p-2.5 rounded-xl text-xs transition group-hover:bg-brand-yellow group-hover:text-brand-blue inline-block">
+                            <i class="fa-solid fa-sliders"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-xs text-brand-blue">Simulasi Gelombang</h4>
+                            <p class="text-[9px] text-slate-500 mt-0.5 leading-relaxed">Visualisasi longitudinal dan hantaran nada suara.</p>
+                        </div>
+                    </button>
+
+                    <!-- Shortcut Card 3: Sensor -->
+                    <button onclick="switchTab('sensor')" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col text-left justify-between h-32 transition hover:border-brand-lightblue active:scale-95 group">
+                        <div class="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl text-xs transition group-hover:bg-emerald-600 group-hover:text-white inline-block">
+                            <i class="fa-solid fa-microphone"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-xs text-brand-blue">Sensor & Jurnal</h4>
+                            <p class="text-[9px] text-slate-500 mt-0.5 leading-relaxed">Praktikum Mandiri & eksperimen nirkabel Gema-Sync.</p>
+                        </div>
+                    </button>
+
+                    <!-- Shortcut Card 4: Kuis -->
+                    <button onclick="switchTab('kuis')" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col text-left justify-between h-32 transition hover:border-brand-lightblue active:scale-95 group">
+                        <div class="bg-rose-50 text-rose-600 p-2.5 rounded-xl text-xs transition group-hover:bg-rose-600 group-hover:text-white inline-block">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-xs text-brand-blue">Kuis Evaluasi</h4>
+                            <p class="text-[9px] text-slate-500 mt-0.5 leading-relaxed">Uji kepintaran fisikamu dengan evaluasi interaktif.</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Call to Action Banner -->
+            <div class="bg-brand-yellow/15 border border-brand-yellow/30 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm">
+                <div class="space-y-0.5">
+                    <h4 class="font-extrabold text-[11px] text-brand-blue">Sudah siap memulai praktikummu?</h4>
+                    <p class="text-[9px] text-slate-600 leading-normal">Pelajari teorinya terlebih dahulu, coba simulasinya, lalu lakukan eksperimen riil!</p>
+                </div>
+                <button onclick="switchTab('materi')" class="bg-brand-blue hover:bg-blue-800 text-white font-extrabold px-4 py-2.5 rounded-xl text-[9px] uppercase tracking-wider transition shrink-0 active:scale-95 shadow-md">
+                    Mulai Belajar <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB: MATERI -->
+        <div id="tab-materi" class="tab-content space-y-6">
+            <div class="bg-gradient-to-r from-brand-blue to-blue-800 text-white p-5 rounded-2xl shadow-sm space-y-1">
+                <div class="text-[10px] bg-brand-yellow text-brand-blue font-black px-2.5 py-0.5 rounded-full inline-block uppercase tracking-wider mb-1">Teori Fisika Lengkap</div>
+                <h2 class="text-lg font-black">Materi: Cepat Rambat Gelombang Bunyi</h2>
+                <p class="text-[11px] text-blue-200 leading-relaxed">Pelajari bagaimana getaran suara merambat sebagai gelombang mekanik longitudinal dan apa saja hukum fisika yang memengaruhi kecepatannya.</p>
+            </div>
+
+            <!-- Section 1: Pengertian Bunyi & Gelombang Longitudinal -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-2">
+                    <span class="bg-brand-yellow/20 text-brand-yellow p-1.5 rounded-lg text-xs"><i class="fa-solid fa-wave-square"></i></span>
+                    1. Hakikat Gelombang Bunyi
+                </h3>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Gelombang bunyi merupakan <strong>gelombang mekanik longitudinal</strong>. Disebut gelombang mekanik karena bunyi <strong>memerlukan medium fisik</strong> (zat padat, cair, atau gas) untuk dapat merambat. Artinya, bunyi sama sekali tidak bisa merambat di dalam ruang hampa udara (vakum), seperti di luar angkasa.
+                </p>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Disebut gelombang longitudinal karena arah rambatnya sejajar dengan arah getarnya. Medium yang dilalui bunyi akan mengalami pola <strong>kerapatan (kondensasi)</strong> bertekanan tinggi dan <strong>renggangan (refraksi)</strong> bertekanan rendah secara bergantian.
+                </p>
+            </div>
+
+            <!-- Section 2: Klasifikasi Bunyi Berdasarkan Frekuensi -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-2">
+                    <span class="bg-brand-lightblue/10 text-brand-lightblue p-1.5 rounded-lg text-xs"><i class="fa-solid fa-ear-listen"></i></span>
+                    2. Klasifikasi Frekuensi Bunyi
+                </h3>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Berdasarkan batas frekuensi getaran yang dihasilkan, bunyi dikelompokkan menjadi tiga kelompok utama:
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                        <span class="text-[10px] font-bold text-brand-lightblue uppercase">Infrasonik</span>
+                        <p class="text-[11px] font-black text-brand-blue font-mono">&lt; 20 Hz</p>
+                        <p class="text-[9px] text-slate-500 leading-normal">Frekuensi sangat rendah. Hanya bisa didengar hewan tertentu seperti gajah, jangkrik, dan lumba-lumba.</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                        <span class="text-[10px] font-bold text-emerald-600 uppercase">Audiosonik</span>
+                        <p class="text-[11px] font-black text-emerald-700 font-mono">20 Hz - 20.000 Hz</p>
+                        <p class="text-[9px] text-slate-500 leading-normal">Rentang frekuensi normal yang mampu didengar oleh telinga manusia secara sehat.</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                        <span class="text-[10px] font-bold text-rose-500 uppercase">Ultrasonik</span>
+                        <p class="text-[11px] font-black text-rose-700 font-mono">&gt; 20.000 Hz</p>
+                        <p class="text-[9px] text-slate-500 leading-normal">Frekuensi ultra tinggi. Didengar kelelawar, lumba-lumba, dan dipakai untuk USG medis atau radar sonar laut.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Rumus Cepat Rambat Berbagai Medium -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-2">
+                    <span class="bg-brand-yellow/20 text-brand-yellow p-1.5 rounded-lg text-xs"><i class="fa-solid fa-vial"></i></span>
+                    3. Rumus Cepat Rambat Bunyi Berdasarkan Medium
+                </h3>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Kecepatan merambatnya gelombang bunyi sangat dipengaruhi oleh kerapatan molekul dan elastisitas medium perantaranya. Bunyi merambat paling cepat pada zat padat dan paling lambat pada zat gas.
+                </p>
+                
+                <div class="space-y-3 pt-1">
+                    <!-- Padat -->
+                    <div class="border-l-4 border-brand-blue pl-3 py-1 space-y-1">
+                        <h4 class="font-bold text-[11px] text-brand-blue">A. Pada Zat Padat</h4>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Dipengaruhi oleh kekakuan/elastisitas bahan yang disebut Modulus Young ($E$) serta massa jenis zat padat ($\rho$):
+                        </p>
+                        <div class="bg-slate-50 p-2.5 rounded-lg text-center text-xs font-semibold text-brand-blue font-mono">
+                            $$v = \sqrt{\frac{E}{\rho}}$$
+                        </div>
+                    </div>
+                    <!-- Cair -->
+                    <div class="border-l-4 border-brand-lightblue pl-3 py-1 space-y-1">
+                        <h4 class="font-bold text-[11px] text-brand-lightblue">B. Pada Zat Cair</h4>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Dipengaruhi oleh modulus elastisitas volume zat cair yang disebut Modulus Bulk ($B$) serta massa jenis zat cair ($\rho$):
+                        </p>
+                        <div class="bg-slate-50 p-2.5 rounded-lg text-center text-xs font-semibold text-brand-blue font-mono">
+                            $$v = \sqrt{\frac{B}{\rho}}$$
+                        </div>
+                    </div>
+                    <!-- Gas -->
+                    <div class="border-l-4 border-brand-yellow pl-3 py-1 space-y-1">
+                        <h4 class="font-bold text-[11px] text-brand-yellow">C. Pada Zat Gas / Udara</h4>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Dipengaruhi oleh konstanta Laplace ($\gamma$), konstanta gas umum ($R$), suhu mutlak Kelvin ($T$), dan massa molar gas ($M$):
+                        </p>
+                        <div class="bg-slate-50 p-2.5 rounded-lg text-center text-xs font-semibold text-brand-blue font-mono">
+                            $$v = \sqrt{\frac{\gamma \cdot R \cdot T}{M}}$$
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-normal">
+                            Untuk udara atmosfer rata-rata pada suhu Celsius ($T$), didekati dengan persamaan empiris yang sangat praktis:
+                        </p>
+                        <div class="bg-blue-50/50 p-2 rounded-lg text-center text-[10px] font-bold text-brand-blue font-mono border border-blue-100">
+                            $$v = 331.5 + 0.6 \cdot T \quad (\text{di mana } T \text{ dalam } ^\circ\text{C})$$
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Tabel Referensi Cepat Rambat Bunyi -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-2">
+                    <span class="bg-brand-lightblue/10 text-brand-lightblue p-1.5 rounded-lg text-xs"><i class="fa-solid fa-table-list"></i></span>
+                    4. Tabel Cepat Rambat Bunyi di Berbagai Medium
+                </h3>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Berikut adalah referensi nilai cepat rambat gelombang bunyi pada suhu kamar ($20^\circ\text{C}$):
+                </p>
+                <div class="overflow-x-auto border border-slate-100 rounded-xl mt-2 text-[10px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase">
+                                <th class="p-2.5">Fase Medium</th>
+                                <th class="p-2.5">Bahan Perantara</th>
+                                <th class="p-2.5 text-right">Kecepatan ($v$)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-600">
+                            <tr>
+                                <td class="p-2.5 text-rose-600 font-bold">Gas</td>
+                                <td class="p-2.5">Udara (suhu $0^\circ\text{C}$)</td>
+                                <td class="p-2.5 text-right font-bold font-mono">331 m/s</td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2.5 text-rose-600 font-bold">Gas</td>
+                                <td class="p-2.5">Udara (suhu $20^\circ\text{C}$)</td>
+                                <td class="p-2.5 text-right font-bold font-mono">343 m/s</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-brand-lightblue font-bold">Cair</td>
+                                <td class="p-2.5">Air Murni</td>
+                                <td class="p-2.5 text-right font-bold font-mono">1.482 m/s</td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2.5 text-brand-lightblue font-bold">Cair</td>
+                                <td class="p-2.5">Air Laut</td>
+                                <td class="p-2.5 text-right font-bold font-mono">1.522 m/s</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-brand-blue font-bold">Padat</td>
+                                <td class="p-2.5">Tembaga</td>
+                                <td class="p-2.5 text-right font-bold font-mono">3.760 m/s</td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2.5 text-brand-blue font-bold">Padat</td>
+                                <td class="p-2.5">Besi / Baja</td>
+                                <td class="p-2.5 text-right font-bold font-mono">5.200 m/s</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-brand-blue font-bold">Padat</td>
+                                <td class="p-2.5">Aluminium</td>
+                                <td class="p-2.5 text-right font-bold font-mono">6.420 m/s</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section 5: Karakteristik & Fenomena Gelombang Bunyi -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-2">
+                    <span class="bg-brand-yellow/20 text-brand-yellow p-1.5 rounded-lg text-xs"><i class="fa-solid fa-podcast"></i></span>
+                    5. Karakteristik & Fenomena Gelombang Bunyi
+                </h3>
+                <div class="space-y-3 text-[11px] text-slate-600 leading-relaxed">
+                    <div>
+                        <strong class="text-brand-blue">A. Pemantulan Bunyi (Refleksi):</strong>
+                        <p class="mt-0.5">Gelombang bunyi akan memantul jika membentur dinding penghalang keras. Fenomena pemantulan dibedakan menjadi:</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-0.5">
+                            <li><strong>Gema:</strong> Bunyi pantul yang terdengar jelas setelah bunyi asli selesai diucapkan (terjadi karena jarak pemantul jauh).</li>
+                            <li><strong>Gaung:</strong> Bunyi pantul yang datang bersamaan dengan bunyi asli sehingga merusak kejelasan bunyi asli (terjadi di ruangan sempit/bioskop tanpa peredam).</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong class="text-brand-blue">B. Pembiasan Bunyi (Refraksi):</strong>
+                        <p class="mt-0.5">Pembelokan arah rambat bunyi saat melewati lapisan udara dengan suhu (kerapatan) berbeda. Contoh: Petir di malam hari terdengar jauh lebih menggelegar karena udara di atas dingin sedangkan dekat tanah hangat.</p>
+                    </div>
+                    <div>
+                        <strong class="text-brand-blue">C. Efek Doppler:</strong>
+                        <p class="mt-0.5">Perubahan frekuensi bunyi yang terdengar akibat adanya gerak relatif antara sumber bunyi (misal ambulans) dan pendengar.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Persamaan Utama & Calculator -->
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 space-y-4">
+                <h3 class="font-bold text-brand-blue text-xs flex items-center">
+                    <i class="fa-solid fa-calculator text-brand-yellow mr-1.5"></i>
+                    Kalkulator & Rumus Fisika Interaktif
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Left: Rumus selector -->
+                    <div class="space-y-2">
+                        <button onclick="setCalcMode('st')" id="btn-calc-st" class="w-full text-left p-3 rounded-lg border-2 border-brand-blue bg-blue-50/50 flex flex-col justify-between transition">
+                            <span class="text-[10px] font-bold text-brand-blue uppercase">Rumus Dasar</span>
+                            <span class="text-xs font-extrabold text-brand-blue mt-1" id="rumus-dasar-display">$v = \frac{s}{t}$</span>
+                            <span class="text-[9px] text-slate-500 mt-1">Menggunakan Jarak ($s$) dan Waktu ($t$)</span>
+                        </button>
+                        <button onclick="setCalcMode('lf')" id="btn-calc-lf" class="w-full text-left p-3 rounded-lg border border-slate-200 bg-white flex flex-col justify-between transition hover:border-brand-lightblue">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Rumus Frekuensi</span>
+                            <span class="text-xs font-extrabold text-slate-700 mt-1" id="rumus-frekuensi-display">$v = \lambda \cdot f$</span>
+                            <span class="text-[9px] text-slate-500 mt-1">Menggunakan Panjang Gelombang ($\lambda$) & Frekuensi ($f$)</span>
+                        </button>
+                    </div>
+
+                    <!-- Middle: Input Form -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                        <div id="calc-inputs" class="space-y-3 text-[11px]">
+                            <!-- Inputs will toggle based on selection -->
+                        </div>
+                        <button onclick="calculatePhysics()" class="w-full bg-brand-blue hover:bg-brand-blue/90 text-white font-bold py-2 rounded-lg text-xs transition active:scale-95">
+                            Hitung Cepat Rambat
+                        </button>
+                    </div>
+
+                    <!-- Right: Results Panel -->
+                    <div class="bg-brand-blue text-white p-4 rounded-xl flex flex-col justify-between text-left">
+                        <div class="space-y-1">
+                            <p class="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Hasil Perhitungan ($v$)</p>
+                            <p class="text-2xl font-black text-brand-yellow" id="calc-result">-- <span class="text-xs text-white">m/s</span></p>
+                        </div>
+                        <div class="border-t border-blue-800/80 pt-2 mt-2">
+                            <p class="text-[9px] text-blue-300 uppercase tracking-widest font-bold">Langkah:</p>
+                            <div class="text-[10px] text-blue-100 italic font-mono mt-0.5 leading-relaxed" id="calc-steps">Pilih rumus dan masukkan nilai untuk melihat cara pengerjaan.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIM PENGEMBANG CARD -->
+            <div class="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-5 shadow-sm border border-slate-150 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="bg-brand-yellow/15 text-brand-yellow p-3.5 rounded-2xl text-lg"><i class="fa-solid fa-users-gear"></i></span>
+                    <div>
+                        <h4 class="font-extrabold text-xs text-brand-blue uppercase tracking-wider">Mengenal Tim Pengembang</h4>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Media pembelajaran ini dibuat dengan penuh dedikasi oleh kelompok kami:</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2.5 justify-center">
+                    <span class="bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-[10px] font-bold text-slate-700 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-user-graduate text-brand-lightblue"></i> Tri Astuti</span>
+                    <span class="bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-[10px] font-bold text-slate-700 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-user-graduate text-brand-lightblue"></i> Nazla Kamilatunnisa</span>
+                    <span class="bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-[10px] font-bold text-slate-700 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-user-graduate text-brand-lightblue"></i> Noval Ramdanih</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: SIMULASI -->
+        <div id="tab-simulasi" class="tab-content space-y-4">
+            <!-- Peta Jalan Integrasi Simulasi & Sensor -->
+            <div class="bg-brand-blue text-white p-4 rounded-2xl shadow-sm border border-blue-900">
+                <div class="flex items-start gap-3">
+                    <div class="bg-brand-yellow text-brand-blue p-2 rounded-xl text-base shrink-0">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="font-extrabold text-xs text-brand-yellow">Eksperimen Gelombang Riil & Simulasi Partikel</h3>
+                        <p class="text-[10px] text-blue-100 leading-normal">
+                            Sesuaikan frekuensi dan amplitudo di bawah ini untuk melihat bagaimana partikel-partikel udara merapat dan merenggang (transmisi longitudinal). Anda juga dapat memicu bunyi asli lewat speaker perangkat!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Particle Canvas & Audio Generator Box -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Left: Controls Panel -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-4 md:col-span-1">
+                    <h4 class="font-black text-xs text-brand-blue uppercase tracking-wider pb-2 border-b border-slate-100">Kontrol Gelombang</h4>
+                    
+                    <!-- Frequency Slider -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                            <span>FREKUENSI ($f$)</span>
+                            <span class="text-brand-blue font-mono text-xs" id="freq-val">250 Hz</span>
+                        </div>
+                        <input type="range" id="slider-freq" min="100" max="1000" step="10" value="250" oninput="updateSimulationControls()" class="w-full accent-brand-blue h-1.5 bg-slate-100 rounded-lg cursor-pointer">
+                        <p class="text-[9px] text-slate-400">Menentukan tinggi/rendahnya nada (pitch) getaran udara.</p>
+                    </div>
+
+                    <!-- Amplitude Slider -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                            <span>AMPLITUDO ($A$)</span>
+                            <span class="text-brand-blue font-mono text-xs" id="amp-val">50%</span>
+                        </div>
+                        <input type="range" id="slider-amp" min="0" max="100" value="50" oninput="updateSimulationControls()" class="w-full accent-brand-blue h-1.5 bg-slate-100 rounded-lg cursor-pointer">
+                        <p class="text-[9px] text-slate-400">Menentukan kenyaringan (keras/lemah) volume gelombang.</p>
+                    </div>
+
+                    <!-- Propagation Medium Selector -->
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Medium Rambat</label>
+                        <select id="sim-medium" onchange="changeSimMedium()" class="w-full bg-slate-50 border border-slate-200 text-[11px] rounded-lg p-2 font-semibold text-slate-700 outline-none">
+                            <option value="udara" data-speed="343">Udara (343 m/s)</option>
+                            <option value="air" data-speed="1482">Air Murni (1482 m/s)</option>
+                            <option value="besi" data-speed="5200">Besi / Baja (5200 m/s)</option>
+                        </select>
+                    </div>
+
+                    <!-- Audio Trigger -->
+                    <div class="pt-2">
+                        <button id="btn-toggle-sound" onclick="toggleWebAudioTone()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                            <i class="fa-solid fa-volume-high"></i> <span id="btn-sound-text">Bunyikan Speaker</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Canvas Visualization -->
+                <div class="bg-brand-dark rounded-2xl p-4 shadow-sm md:col-span-2 flex flex-col justify-between h-[340px] relative overflow-hidden">
+                    <div class="absolute top-3 left-4 text-[9px] text-slate-400 uppercase tracking-widest font-black z-10 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                        Simulasi Longitudinal Real-Time
+                    </div>
+                    
+                    <!-- Canvas for drawing particles -->
+                    <div class="flex-1 flex items-center justify-center mt-4">
+                        <canvas id="waveCanvas" class="w-full h-44 bg-slate-950 rounded-lg border border-slate-800"></canvas>
+                    </div>
+
+                    <!-- Real-time calculation output based on controls -->
+                    <div class="mt-2 bg-slate-900/50 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between text-[10px]">
+                        <div class="text-slate-300">
+                            Cepat Rambat ($v$): <span class="font-mono text-brand-yellow font-bold text-xs" id="sim-v-out">343 m/s</span>
+                        </div>
+                        <div class="text-slate-300">
+                            Panjang Gelombang ($\lambda$): <span class="font-mono text-brand-lightblue font-bold text-xs" id="sim-lambda-out">1.37 m</span>
+                        </div>
+                        <div class="text-[9px] text-slate-500 font-mono hidden sm:block">
+                            $\lambda = \frac{v}{f}$
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teori Singkat Pendukung Simulasi -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-xs text-brand-blue flex items-center gap-1.5">
+                    <i class="fa-solid fa-chalkboard-user text-brand-yellow"></i> Petunjuk Praktikum Virtual
+                </h3>
+                <ul class="list-decimal pl-5 text-[11px] text-slate-600 space-y-1 leading-relaxed">
+                    <li>Atur <strong>Frekuensi ($f$)</strong> ke nilai tertentu, misalnya $250\text{ Hz}$. Perhatikan seberapa cepat partikel udara melakukan osilasi maju-mundur.</li>
+                    <li>Suhu udara diasumsikan standar $20^\circ\text{C}$ dengan kecepatan hantar $343\text{ m/s}$. Hubungan panjang gelombang dihitung otomatis dengan $\lambda = v/f$.</li>
+                    <li>Tekan tombol <strong>Bunyikan Speaker</strong> untuk mendengar gelombang bunyi murni (sinusoidal) secara nyata. Anda akan mendengar frekuensi getaran tersebut langsung di telinga Anda!</li>
+                    <li>Ganti medium ke <strong>Air</strong> atau <strong>Besi</strong>. Lihat bagaimana panjang gelombang merenggang sangat jauh karena kecepatan rambat di zat padat/cair jauh lebih tinggi daripada udara.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- TAB: SENSOR & JURNAL -->
+        <div id="tab-sensor" class="tab-content space-y-6">
+            <!-- Header Panel -->
+            <div class="bg-gradient-to-r from-emerald-800 to-teal-700 text-white p-5 rounded-2xl shadow-sm space-y-1">
+                <div class="text-[10px] bg-brand-yellow text-brand-blue font-black px-2.5 py-0.5 rounded-full inline-block uppercase tracking-wider mb-1">Eksperimen & Sinkronisasi</div>
+                <h2 class="text-lg font-black">Laboratorium Bunyi Mandiri</h2>
+                <p class="text-[11px] text-emerald-100 leading-relaxed">
+                    Ukur gelombang bunyi secara langsung menggunakan sensor mikrofon HP Anda atau sinkronkan dua ponsel secara nirkabel dengan fitur Gema-Sync untuk mengukur kecepatan rambat bunyi secara akurat di dunia nyata.
+                </p>
+            </div>
+
+            <!-- Double Column: Sensor Mikrofon Lokal & Gema-Sync Nirkabel -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Box 1: Sensor Frekuensi Mikrofon -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <h3 class="font-bold text-xs text-brand-blue flex items-center gap-1.5">
+                        <i class="fa-solid fa-microphone text-emerald-600"></i> 1. Frekuensi Detektor Mikrofon
+                    </h3>
+                    <p class="text-[11px] text-slate-500 leading-relaxed">
+                        Aktifkan mikrofon untuk menganalisis dan mendeteksi frekuensi serta intensitas kebisingan di sekitar Anda secara langsung.
+                    </p>
+
+                    <!-- Real-time Decibel / Frequency Display Card -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-center">
+                        <div class="space-y-0.5 flex-1 border-r border-slate-200">
+                            <span class="text-[9px] text-slate-400 font-extrabold uppercase block">Frekuensi Dominan</span>
+                            <span id="mic-freq" class="text-base font-black text-emerald-600 font-mono">-- Hz</span>
+                        </div>
+                        <div class="space-y-0.5 flex-1">
+                            <span class="text-[9px] text-slate-400 font-extrabold uppercase block">Volume / Kebisingan</span>
+                            <span id="mic-db" class="text-base font-black text-emerald-600 font-mono">-- dB</span>
+                        </div>
+                    </div>
+
+                    <!-- Chart JS Canvas for Analyser visualization -->
+                    <div class="bg-slate-950 p-2 rounded-xl h-32 relative">
+                        <canvas id="micChart" class="w-full h-full"></canvas>
+                        <div id="mic-status-text" class="absolute inset-0 flex items-center justify-center text-[10px] text-slate-500 font-semibold bg-slate-950/90 rounded-xl">
+                            Sensor belum diaktifkan
+                        </div>
+                    </div>
+
+                    <button id="btn-toggle-mic" onclick="toggleLocalMicrophone()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs">
+                        <i class="fa-solid fa-play"></i> <span id="btn-mic-text">Aktifkan Sensor Mikrofon</span>
+                    </button>
+                </div>
+
+                <!-- Box 2: Gema-Sync (MQTT Multi-Device Experiment) -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <h3 class="font-bold text-xs text-brand-blue flex items-center gap-1.5">
+                            <i class="fa-solid fa-tower-broadcast text-brand-yellow"></i> 2. Gema-Sync (Eksperimen Nirkabel)
+                        </h3>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">
+                            Hubungkan dua ponsel dalam satu kelas (satu sebagai <strong>Pemancar</strong>, satu sebagai <strong>Penerima</strong>) dengan memasukkan ID Kelas yang sama. Berguna untuk simulasi pengukuran cepat rambat bunyi nirkabel.
+                        </p>
+                    </div>
+
+                    <!-- Room Configuration -->
+                    <div class="space-y-2.5">
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="space-y-1">
+                                <label class="font-bold text-slate-500">ID Kelas (Grup)</label>
+                                <input type="text" id="sync-room-id" value="fisika-bunyi-1" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue font-mono font-bold">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="font-bold text-slate-500">Jarak HP (meter)</label>
+                                <input type="number" id="sync-distance" value="50" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue font-mono font-bold">
+                            </div>
+                        </div>
+
+                        <!-- Status bar -->
+                        <div class="bg-slate-50 border border-slate-150 p-2 rounded-xl flex items-center justify-between text-[10px]">
+                            <span class="text-slate-500 font-bold">Status Koneksi:</span>
+                            <span id="sync-status" class="text-rose-600 font-extrabold flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Terputus</span>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons based on Role Selection -->
+                    <div class="space-y-2 pt-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-sync-connect" onclick="connectGemaSync()" class="w-full bg-brand-blue hover:bg-blue-800 text-white font-bold py-2 rounded-xl text-[10px] transition active:scale-95">
+                                <i class="fa-solid fa-link mr-1"></i> Hubungkan HP
+                            </button>
+                            <button id="btn-sync-trigger" onclick="triggerGemaPulse()" disabled class="w-full bg-brand-yellow text-brand-blue opacity-50 cursor-not-allowed font-extrabold py-2 rounded-xl text-[10px] transition active:scale-95">
+                                <i class="fa-solid fa-paper-plane mr-1"></i> Kirim Pulsa Bunyi
+                            </button>
+                        </div>
+                        <p class="text-[9px] text-slate-400 text-center">Gunakan Broker Publik Terenkripsi untuk sinkronisasi kilat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gema-Sync Live Timing Analysis Card -->
+            <div id="sync-analysis-card" class="bg-slate-900 text-white p-4 rounded-2xl shadow-md border border-slate-800 space-y-3 hidden">
+                <h4 class="text-xs font-black text-brand-yellow uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-line"></i> Analisis Waktu Rambat Bunyi (Gema-Sync)
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-b border-slate-800 pb-3">
+                    <div class="space-y-0.5">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase block">Waktu Kirim ($t_{start}$)</span>
+                        <span id="sync-t1" class="text-xs font-black font-mono text-white">-- ms</span>
+                    </div>
+                    <div class="space-y-0.5">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase block">Waktu Terima ($t_{end}$)</span>
+                        <span id="sync-t2" class="text-xs font-black font-mono text-white">-- ms</span>
+                    </div>
+                    <div class="space-y-0.5">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase block">Selang Waktu ($\Delta t$)</span>
+                        <span id="sync-dt" class="text-xs font-black font-mono text-brand-lightblue">-- s</span>
+                    </div>
+                    <div class="space-y-0.5">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase block">Cepat Rambat Hitung</span>
+                        <span id="sync-calc-v" class="text-sm font-black font-mono text-brand-yellow">-- m/s</span>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-2 pt-1 text-[10px]">
+                    <span class="text-slate-400 italic">Data berhasil diukur nirkabel via MQTT.</span>
+                    <button onclick="saveSyncResultToJournal()" class="bg-brand-yellow hover:bg-amber-600 text-brand-blue font-black px-3.5 py-1.5 rounded-lg uppercase tracking-wider transition active:scale-95">
+                        <i class="fa-solid fa-bookmark mr-1"></i> Simpan ke Jurnal Praktikum
+                    </button>
+                </div>
+            </div>
+
+            <!-- Jurnal Praktikum Digital -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                    <h3 class="font-bold text-xs text-brand-blue flex items-center gap-1.5">
+                        <i class="fa-solid fa-book text-brand-yellow"></i> Jurnal Laporan Praktikum
+                    </h3>
+                    <div class="flex gap-1.5">
+                        <button onclick="clearJournal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-[9px] font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Semua
+                        </button>
+                        <button onclick="exportJournal()" class="bg-brand-blue hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> Cetak Jurnal
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                    Catat dan simpan hasil uji coba kalkulasi atau eksperimen sensor Anda ke tabel di bawah untuk membuat analisis laporan praktikum mandiri.
+                </p>
+
+                <!-- Journal Entry manual form -->
+                <form id="journal-form" onsubmit="addJournalEntryManual(event)" class="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px] font-bold bg-slate-50 p-3 rounded-xl border border-slate-150">
+                    <div class="space-y-1">
+                        <label class="text-slate-500">Bahan Medium</label>
+                        <input type="text" id="j-medium" required placeholder="Contoh: Udara" class="w-full p-2 border border-slate-200 rounded-lg font-normal">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-slate-500">Jarak ($s$) - meter</label>
+                        <input type="number" step="any" id="j-distance" required placeholder="Contoh: 10" class="w-full p-2 border border-slate-200 rounded-lg font-normal">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-slate-500">Waktu ($t$) - detik</label>
+                        <input type="number" step="any" id="j-time" required placeholder="Contoh: 0.029" class="w-full p-2 border border-slate-200 rounded-lg font-normal">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-slate-500">Kecepatan ($v$)</label>
+                        <input type="text" id="j-v" readonly placeholder="Auto" class="w-full p-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 font-normal">
+                    </div>
+                    <div class="col-span-2 md:col-span-1 flex items-end">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 rounded-lg text-[10px] transition uppercase tracking-wider">
+                            <i class="fa-solid fa-plus mr-0.5"></i> Tambah
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Data Table -->
+                <div class="overflow-x-auto border border-slate-150 rounded-xl">
+                    <table class="w-full text-left border-collapse text-[10px]" id="table-journal">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold uppercase">
+                                <th class="p-2.5">No</th>
+                                <th class="p-2.5">Bahan / Medium</th>
+                                <th class="p-2.5 text-right">Jarak ($s$)</th>
+                                <th class="p-2.5 text-right">Waktu ($t$)</th>
+                                <th class="p-2.5 text-right">Cepat Rambat ($v$)</th>
+                                <th class="p-2.5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-600" id="journal-tbody">
+                            <!-- Dynamic records -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: KUIS EVALUASI -->
+        <div id="tab-kuis" class="tab-content space-y-6">
+            <!-- Header Panel -->
+            <div class="bg-gradient-to-r from-rose-800 to-rose-700 text-white p-5 rounded-2xl shadow-sm space-y-1">
+                <div class="text-[10px] bg-brand-yellow text-brand-blue font-black px-2.5 py-0.5 rounded-full inline-block uppercase tracking-wider mb-1">Kuis Evaluasi Mandiri</div>
+                <h2 class="text-lg font-black">Uji Pemahaman Konseptual</h2>
+                <p class="text-[11px] text-rose-100 leading-relaxed">
+                    Evaluasi pemahaman Anda terkait hakikat gelombang bunyi, klasifikasi frekuensi, perambatan medium, hingga hukum cepat rambat dengan kuis interaktif di bawah ini.
+                </p>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quiz-container" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
+                <!-- Progress and Score Bar -->
+                <div class="flex justify-between items-center pb-3 border-b border-slate-100 text-[10px] font-bold text-slate-500">
+                    <span class="uppercase">Pertanyaan <span id="quiz-index-txt" class="text-rose-600 text-xs font-black">1</span> dari <span id="quiz-total-txt">5</span></span>
+                    <span class="bg-rose-50 text-rose-600 px-3 py-1 rounded-full">Skor Saat Ini: <span id="quiz-score-txt" class="font-bold">0</span></span>
+                </div>
+
+                <!-- Question display container -->
+                <div class="space-y-3">
+                    <h3 id="quiz-question-title" class="font-extrabold text-sm text-slate-800 leading-relaxed">
+                        Loading Pertanyaan...
+                    </h3>
+                </div>
+
+                <!-- Options List -->
+                <div class="space-y-2" id="quiz-options-list">
+                    <!-- Dynamic rendering of options -->
+                </div>
+
+                <!-- Explanation / Feedback Box (Hidden initially) -->
+                <div id="quiz-feedback-box" class="p-4 rounded-xl border hidden text-[11px] leading-relaxed">
+                    <!-- Custom explanation and answer indicator -->
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="flex justify-between items-center pt-2">
+                    <button id="btn-quiz-prev" onclick="navigateQuiz(-1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-[10px] transition uppercase">Sebelumnya</button>
+                    <button id="btn-quiz-next" onclick="navigateQuiz(1)" class="bg-brand-blue hover:bg-blue-800 text-white font-bold px-4 py-2 rounded-xl text-[10px] transition uppercase">Selanjutnya</button>
+                    <button id="btn-quiz-submit" onclick="finishQuiz()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-[10px] transition uppercase hidden">Selesai Kuis</button>
+                </div>
+            </div>
+
+            <!-- Quiz Result Splash (Hidden by default) -->
+            <div id="quiz-result-splash" class="bg-gradient-to-br from-brand-blue to-blue-950 text-white p-8 rounded-2xl text-center space-y-4 shadow-xl hidden">
+                <div class="w-16 h-16 bg-brand-yellow text-brand-blue rounded-full flex items-center justify-center text-2xl mx-auto shadow-md">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-black text-lg">Kuis Selesai!</h3>
+                    <p class="text-[11px] text-blue-200">Hasil nilai pencapaian pemahaman Anda terkait Gelombang Bunyi:</p>
+                </div>
+                <div class="inline-block bg-white/10 border border-white/20 p-4 rounded-2xl font-mono">
+                    <span class="text-[10px] font-bold text-blue-300 uppercase block tracking-wider">Skor Akhir Anda</span>
+                    <span id="quiz-final-score" class="text-4xl font-black text-brand-yellow">80</span> <span class="text-xs text-blue-200">/ 100</span>
+                </div>
+                <div>
+                    <p id="quiz-evaluation-feedback" class="text-[11px] text-slate-300 max-w-md mx-auto leading-normal">
+                        Kinerja Anda luar biasa! Anda sudah memahami sebagian besar parameter cepat rambat bunyi dengan baik.
+                    </p>
+                </div>
+                <div class="pt-3 border-t border-white/10 flex justify-center gap-3">
+                    <button onclick="restartQuiz()" class="bg-white hover:bg-slate-100 text-brand-blue font-extrabold px-5 py-2 rounded-xl text-[10px] uppercase transition active:scale-95 shadow-sm">
+                        Coba Lagi <i class="fa-solid fa-rotate-left ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MOBILE STICKY BOTTOM NAVIGATION BAR -->
+    <nav class="md:hidden bg-brand-blue text-white/70 border-t border-brand-blue/30 fixed bottom-0 left-0 right-0 py-2.5 px-4 flex justify-around items-center z-50 shadow-2xl backdrop-blur-md">
+        <button onclick="switchTab('home')" id="mob-home" class="mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white transition">
+            <i class="fa-solid fa-house text-sm"></i> Beranda
+        </button>
+        <button onclick="switchTab('materi')" id="mob-materi" class="mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white/50 transition">
+            <i class="fa-solid fa-book-open text-sm"></i> Materi
+        </button>
+        <button onclick="switchTab('simulasi')" id="mob-simulasi" class="mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white/50 transition">
+            <i class="fa-solid fa-sliders text-sm"></i> Simulasi
+        </button>
+        <button onclick="switchTab('sensor')" id="mob-sensor" class="mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white/50 transition">
+            <i class="fa-solid fa-microphone text-sm"></i> Sensor
+        </button>
+        <button onclick="switchTab('kuis')" id="mob-kuis" class="mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white/50 transition">
+            <i class="fa-solid fa-graduation-cap text-sm"></i> Kuis
+        </button>
+    </nav>
+
+    <!-- Custom Floating Alert Modal -->
+    <div id="alertModal" class="fixed inset-0 bg-slate-900/65 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-100 text-center">
+            <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center text-lg mx-auto">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="space-y-1">
+                <h4 id="alertModalTitle" class="font-extrabold text-sm text-slate-800 uppercase">Perhatian</h4>
+                <p id="alertModalMsg" class="text-[11px] text-slate-500 leading-normal">Koneksi mikrofon ditolak oleh browser Anda.</p>
+            </div>
+            <button onclick="hideAlertModal()" class="w-full bg-brand-blue hover:bg-brand-blue/90 text-white font-bold py-2 rounded-xl text-xs transition">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Program Logic -->
+    <script>
+        // Tab switching controller
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+
+            // Update Desktop Navbar Buttons Active State
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 hover:bg-white/10 text-white/80";
+            });
+            const deskBtn = document.getElementById(`nav-${tabName}`);
+            if (deskBtn) {
+                deskBtn.className = "nav-btn px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-brand-lightblue/20 text-white font-extrabold shadow-sm";
+            }
+
+            // Update Mobile Bottom Active Button State
+            document.querySelectorAll('.mob-btn').forEach(btn => {
+                btn.className = "mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-white/50 transition";
+            });
+            const mobBtn = document.getElementById(`mob-${tabName}`);
+            if (mobBtn) {
+                mobBtn.className = "mob-btn flex flex-col items-center gap-1 flex-1 text-[9px] font-bold text-brand-yellow transition";
+            }
+
+            // Custom init depending on active tab
+            if (tabName === 'simulasi') {
+                initWaveCanvas();
+            }
+        }
+
+        // Alert Modal Helper (No browser alert)
+        function showAlertModal(title, msg) {
+            document.getElementById('alertModalTitle').innerText = title;
+            document.getElementById('alertModalMsg').innerText = msg;
+            document.getElementById('alertModal').classList.remove('hidden');
+        }
+
+        function hideAlertModal() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+
+
+        /* ==================== TAB 1: MATERI & CALCULATOR LOGIC ==================== */
+        let activeCalcMode = 'st';
+
+        function setCalcMode(mode) {
+            activeCalcMode = mode;
+            const btnSt = document.getElementById('btn-calc-st');
+            const btnLf = document.getElementById('btn-calc-lf');
+            const container = document.getElementById('calc-inputs');
+
+            if (mode === 'st') {
+                btnSt.className = "w-full text-left p-3 rounded-lg border-2 border-brand-blue bg-blue-50/50 flex flex-col justify-between transition";
+                btnLf.className = "w-full text-left p-3 rounded-lg border border-slate-200 bg-white flex flex-col justify-between transition hover:border-brand-lightblue";
+                
+                container.innerHTML = `
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-500 uppercase">Jarak Tempuh ($s$) - Meter</label>
+                        <input type="number" id="input-s" value="340" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-500 uppercase">Waktu Tempuh ($t$) - Detik</label>
+                        <input type="number" id="input-t" value="1.0" step="any" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue">
+                    </div>
+                `;
+            } else {
+                btnLf.className = "w-full text-left p-3 rounded-lg border-2 border-brand-blue bg-blue-50/50 flex flex-col justify-between transition";
+                btnSt.className = "w-full text-left p-3 rounded-lg border border-slate-200 bg-white flex flex-col justify-between transition hover:border-brand-lightblue";
+                
+                container.innerHTML = `
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-500 uppercase">Panjang Gelombang ($\\lambda$) - Meter</label>
+                        <input type="number" id="input-lambda" value="1.37" step="any" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-500 uppercase">Frekuensi ($f$) - Hertz</label>
+                        <input type="number" id="input-freq" value="250" class="w-full p-2 border border-slate-200 rounded-lg text-slate-700 outline-none focus:border-brand-lightblue">
+                    </div>
+                `;
+            }
+        }
+
+        function calculatePhysics() {
+            const resultDisplay = document.getElementById('calc-result');
+            const stepsDisplay = document.getElementById('calc-steps');
+
+            if (activeCalcMode === 'st') {
+                const s = parseFloat(document.getElementById('input-s').value);
+                const t = parseFloat(document.getElementById('input-t').value);
+
+                if (isNaN(s) || isNaN(t) || t <= 0) {
+                    showAlertModal("Input Salah", "Pastikan jarak dan waktu valid serta bernilai positif.");
+                    return;
+                }
+
+                const v = s / t;
+                resultDisplay.innerHTML = `${v.toFixed(2)} <span class="text-xs text-white">m/s</span>`;
+                stepsDisplay.innerHTML = `
+                    1. Gunakan rumus $v = s / t$.<br>
+                    2. Masukkan nilai: $s = ${s}\\text{ m}$, $t = ${t}\\text{ s}$.<br>
+                    3. Hasil: $${s} / ${t} = ${v.toFixed(2)}\\text{ m/s}$.
+                `;
+            } else {
+                const lambda = parseFloat(document.getElementById('input-lambda').value);
+                const f = parseFloat(document.getElementById('input-freq').value);
+
+                if (isNaN(lambda) || isNaN(f) || lambda <= 0 || f <= 0) {
+                    showAlertModal("Input Salah", "Pastikan panjang gelombang & frekuensi bernilai positif.");
+                    return;
+                }
+
+                const v = lambda * f;
+                resultDisplay.innerHTML = `${v.toFixed(2)} <span class="text-xs text-white">m/s</span>`;
+                stepsDisplay.innerHTML = `
+                    1. Gunakan rumus $v = \\lambda \\cdot f$.<br>
+                    2. Masukkan nilai: $\\lambda = ${lambda}\\text{ m}$, $f = ${f}\\text{ Hz}$.<br>
+                    3. Hasil: $${lambda} \\cdot ${f} = ${v.toFixed(2)}\\text{ m/s}$.
+                `;
+            }
+            // Ask MathJax to re-evaluate formulas
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // Initialize calculator with st inputs
+        setCalcMode('st');
+
+
+        /* ==================== TAB 2: SIMULASI GELOMBANG & AUDIO GENERATOR ==================== */
+        let animationId;
+        let canvas, ctx;
+        let particles = [];
+        const numParticles = 65;
+        let time = 0;
+
+        // Sound states using Web Audio API
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+        let isPlayingSound = false;
+
+        function initWaveCanvas() {
+            canvas = document.getElementById('waveCanvas');
+            if (!canvas) return;
+            ctx = canvas.getContext('2d');
+
+            // Handle responsive canvas width
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            // Populate uniform coordinates for air particles
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                particles.push({
+                    x0: (rect.width / numParticles) * i + (rect.width / numParticles / 2),
+                    y: rect.height / 2
+                });
+            }
+
+            if (!animationId) {
+                animateSimulation();
+            }
+        }
+
+        function updateSimulationControls() {
+            const freq = parseInt(document.getElementById('slider-freq').value);
+            const amp = parseInt(document.getElementById('slider-amp').value);
+
+            document.getElementById('freq-val').innerText = `${freq} Hz`;
+            document.getElementById('amp-val').innerText = `${amp}%`;
+
+            // Adjust tone live if oscillator is active
+            if (oscillator && isPlayingSound) {
+                oscillator.frequency.value = freq;
+                // Safely adjust audio volume (limit maximum amplitude to save user ears)
+                gainNode.gain.setValueAtTime((amp / 100) * 0.1, audioCtx.currentTime);
+            }
+
+            // Recalculate wavelength for display
+            const selectMedium = document.getElementById('sim-medium');
+            const currentSpeed = parseFloat(selectMedium.options[selectMedium.selectedIndex].getAttribute('data-speed'));
+            const calculatedLambda = currentSpeed / freq;
+
+            document.getElementById('sim-v-out').innerText = `${currentSpeed} m/s`;
+            document.getElementById('sim-lambda-out').innerText = `${calculatedLambda.toFixed(2)} m`;
+        }
+
+        function changeSimMedium() {
+            updateSimulationControls();
+        }
+
+        // Longitudinal wave simulation algorithm (Compression and Rarefaction drawing)
+        function animateSimulation() {
+            if (!canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const rect = canvas.getBoundingClientRect();
+            const freq = parseInt(document.getElementById('slider-freq').value);
+            const amp = parseInt(document.getElementById('slider-amp').value);
+
+            // Frequency controls speed of wave propagation visual
+            const speed = 0.05;
+            time += speed;
+
+            // Frequency translates to wavenumber k
+            const k = (2 * Math.PI) / (rect.width / (freq / 150)); 
+            const maxDisplacement = amp * 0.45; // scale factor
+
+            // Draw wave grid indicators/particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Displacement equation for longitudinal waves: x = x0 + A * sin(k * x0 - omega * t)
+                const displacement = maxDisplacement * Math.sin(k * p.x0 - time);
+                const currentX = p.x0 + displacement;
+
+                // Render compression and rarefaction density using color gradient strength
+                ctx.beginPath();
+                ctx.arc(currentX, p.y + (Math.sin(p.x0 + time * 0.5) * 5), 3, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(59, 130, 246, ${0.4 + (Math.abs(displacement) / maxDisplacement) * 0.6 || 0.6})`;
+                ctx.fill();
+
+                // Add extra particles random offsets to simulate density visually
+                ctx.beginPath();
+                ctx.arc(currentX + 5, p.y - 12 + (Math.cos(p.x0 + time * 0.5) * 4), 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(currentX - 5, p.y + 12 + (Math.cos(p.x0 - time * 0.5) * 4), 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.fill();
+            }
+
+            // Draw a subtle helper compression/rarefaction wave curve at bottom
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+            ctx.lineWidth = 1.5;
+            for (let x = 0; x < rect.width; x += 5) {
+                const sineVal = Math.sin(k * x - time) * 15;
+                if (x === 0) ctx.moveTo(x, rect.height - 25 + sineVal);
+                else ctx.lineTo(x, rect.height - 25 + sineVal);
+            }
+            ctx.stroke();
+
+            animationId = requestAnimationFrame(animateSimulation);
+        }
+
+        // Play authentic tone to show sound is vibration
+        function toggleWebAudioTone() {
+            if (isPlayingSound) {
+                stopWebAudioTone();
+            } else {
+                startWebAudioTone();
+            }
+        }
+
+        function startWebAudioTone() {
+            try {
+                // Initialize modern audio system
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // If state suspended, resume (needed for mobile/safari interaction rules)
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                oscillator = audioCtx.createOscillator();
+                gainNode = audioCtx.createGain();
+
+                const freq = parseInt(document.getElementById('slider-freq').value);
+                const amp = parseInt(document.getElementById('slider-amp').value);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+                
+                // Keep gain safe to protect students from high volume buzz
+                gainNode.gain.setValueAtTime((amp / 100) * 0.1, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                isPlayingSound = true;
+
+                document.getElementById('btn-sound-text').innerText = "Matikan Speaker";
+                document.getElementById('btn-toggle-sound').classList.replace('bg-rose-600', 'bg-slate-700');
+            } catch (err) {
+                showAlertModal("Gagal Memutar Suara", "Sistem audio perangkat Anda tidak mengizinkan pemutaran ini.");
+            }
+        }
+
+        function stopWebAudioTone() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+                oscillator = null;
+            }
+            isPlayingSound = false;
+            document.getElementById('btn-sound-text').innerText = "Bunyikan Speaker";
+            document.getElementById('btn-toggle-sound').classList.replace('bg-slate-700', 'bg-rose-600');
+        }
+
+
+        /* ==================== TAB 3: SENSOR & JURNAL PRACTICUM LOGIC ==================== */
+        let localMicStream = null;
+        let localAudioContext = null;
+        let localAnalyser = null;
+        let localDataArray = null;
+        let micInterval = null;
+        let micChart = null;
+        let isLocalMicOn = false;
+
+        // Initialize simple visual graph for microphone
+        function initMicChart() {
+            const ctxChart = document.getElementById('micChart').getContext('2d');
+            micChart = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [{
+                        label: 'Kenyaringan (Amplitudo)',
+                        data: Array(30).fill(0),
+                        borderColor: '#10B981',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Activate local audio context analyzer
+        async function toggleLocalMicrophone() {
+            if (isLocalMicOn) {
+                stopLocalMicrophone();
+            } else {
+                startLocalMicrophone();
+            }
+        }
+
+        async function startLocalMicrophone() {
+            try {
+                localMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                localAnalyser = localAudioContext.createAnalyser();
+                localAnalyser.fftSize = 256;
+
+                const source = localAudioContext.createMediaStreamSource(localMicStream);
+                source.connect(localAnalyser);
+
+                localDataArray = new Uint8Array(localAnalyser.frequencyBinCount);
+                
+                // Hide status placeholder
+                document.getElementById('mic-status-text').classList.add('hidden');
+                document.getElementById('btn-mic-text').innerText = "Matikan Sensor Mikrofon";
+                document.getElementById('btn-toggle-mic').classList.replace('bg-emerald-600', 'bg-slate-700');
+
+                if (!micChart) {
+                    initMicChart();
+                }
+
+                isLocalMicOn = true;
+
+                // Monitor real-time volumes & approximate frequency peak
+                micInterval = setInterval(() => {
+                    localAnalyser.getByteFrequencyData(localDataArray);
+                    
+                    // Volume calculation (average amplitude)
+                    let total = 0;
+                    let maxVal = 0;
+                    let peakIndex = 0;
+                    for (let i = 0; i < localDataArray.length; i++) {
+                        total += localDataArray[i];
+                        if (localDataArray[i] > maxVal) {
+                            maxVal = localDataArray[i];
+                            peakIndex = i;
+                        }
+                    }
+                    const avgVolume = total / localDataArray.length;
+                    
+                    // Map average volume directly to estimated Decibels representation
+                    const dbEstimate = Math.min(100, Math.round(avgVolume * 0.8));
+
+                    // Estimate Peak Frequency: (peakIndex * sampleRate) / fftSize
+                    const sampleRate = localAudioContext.sampleRate;
+                    const estimatedFreq = Math.round((peakIndex * sampleRate) / localAnalyser.fftSize);
+
+                    // Update UI text display
+                    document.getElementById('mic-db').innerText = `${dbEstimate} dB`;
+                    document.getElementById('mic-freq').innerText = dbEstimate > 10 ? `${estimatedFreq} Hz` : '-- Hz';
+
+                    // Update Chart dynamic data array
+                    if (micChart) {
+                        micChart.data.datasets[0].data.shift();
+                        micChart.data.datasets[0].data.push(dbEstimate);
+                        micChart.update('none');
+                    }
+                }, 100);
+
+            } catch (err) {
+                showAlertModal("Gagal Mengakses Mikrofon", "Browser memerlukan izin akses mikrofon untuk eksperimen frekuensi riil.");
+            }
+        }
+
+        function stopLocalMicrophone() {
+            if (micInterval) clearInterval(micInterval);
+            if (localMicStream) {
+                localMicStream.getTracks().forEach(track => track.stop());
+                localMicStream = null;
+            }
+            if (localAudioContext) {
+                localAudioContext.close();
+                localAudioContext = null;
+            }
+
+            isLocalMicOn = false;
+            document.getElementById('mic-status-text').classList.remove('hidden');
+            document.getElementById('mic-db').innerText = '-- dB';
+            document.getElementById('mic-freq').innerText = '-- Hz';
+            document.getElementById('btn-mic-text').innerText = "Aktifkan Sensor Mikrofon";
+            document.getElementById('btn-toggle-mic').classList.replace('bg-slate-700', 'bg-emerald-600');
+        }
+
+
+        /* ==================== SINKRONISASI GEMA-SYNC (MQTT) ==================== */
+        let mqttClient = null;
+        let isConnectedMqtt = false;
+        let syncT1 = null;
+
+        function connectGemaSync() {
+            const roomId = document.getElementById('sync-room-id').value.trim();
+            if (!roomId) {
+                showAlertModal("Room ID Kosong", "Masukkan ID Kelas untuk sinkronisasi.");
+                return;
+            }
+
+            const statusLabel = document.getElementById('sync-status');
+            statusLabel.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Menghubungkan...`;
+            statusLabel.className = "text-amber-500 font-extrabold flex items-center gap-1";
+
+            // Connect to a public encrypted reliable MQTT over WebSockets
+            const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+            const clientId = 'gemasynclient_' + Math.random().toString(16).substr(2, 8);
+
+            try {
+                mqttClient = mqtt.connect(brokerUrl, { clientId: clientId, keepalive: 60 });
+
+                mqttClient.on('connect', () => {
+                    isConnectedMqtt = true;
+                    statusLabel.innerHTML = `<i class="fa-solid fa-circle"></i> Terhubung`;
+                    statusLabel.className = "text-emerald-500 font-extrabold flex items-center gap-1";
+
+                    // Enable action controls
+                    document.getElementById('btn-sync-trigger').removeAttribute('disabled');
+                    document.getElementById('btn-sync-trigger').classList.remove('opacity-50', 'cursor-not-allowed');
+
+                    // Subscribe to the unified room topic
+                    mqttClient.subscribe(`fisikabunyi/gema/${roomId}`);
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        handleGemaMqttMessage(payload);
+                    } catch (e) {
+                        // ignore malformed payloads
+                    }
+                });
+
+                mqttClient.on('close', () => {
+                    isConnectedMqtt = false;
+                    statusLabel.innerHTML = `<i class="fa-solid fa-circle"></i> Terputus`;
+                    statusLabel.className = "text-rose-600 font-extrabold flex items-center gap-1";
+                    document.getElementById('btn-sync-trigger').setAttribute('disabled', 'true');
+                    document.getElementById('btn-sync-trigger').classList.add('opacity-50', 'cursor-not-allowed');
+                });
+
+            } catch (err) {
+                statusLabel.innerHTML = `<i class="fa-solid fa-circle"></i> Gagal`;
+                statusLabel.className = "text-rose-600 font-extrabold flex items-center gap-1";
+            }
+        }
+
+        // Student triggers a pulse
+        function triggerGemaPulse() {
+            if (!isConnectedMqtt || !mqttClient) return;
+            const roomId = document.getElementById('sync-room-id').value.trim();
+            const distance = parseFloat(document.getElementById('sync-distance').value);
+
+            const timestamp = performance.now(); // High precision microsecond epoch timer
+            const payload = {
+                type: 'pulse',
+                sender: mqttClient.options.clientId,
+                sentAt: timestamp,
+                distance: distance
+            };
+
+            // Sound local speaker beep to simulate real sound traveling
+            playLocalTriggerBeep();
+
+            mqttClient.publish(`fisikabunyi/gema/${roomId}`, JSON.stringify(payload));
+        }
+
+        function playLocalTriggerBeep() {
+            try {
+                const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = tempCtx.createOscillator();
+                const gain = tempCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 800; // piercing beep tone
+                gain.gain.setValueAtTime(0.2, tempCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(tempCtx.destination);
+                osc.start();
+                osc.stop(tempCtx.currentTime + 0.15); // play for 150ms
+            } catch (err) {
+                // AudioContext auto restriction
+            }
+        }
+
+        // Handle timestamps of signal transmissions
+        function handleGemaMqttMessage(data) {
+            if (data.type === 'pulse') {
+                const tReceived = performance.now();
+                const tSent = data.sentAt;
+
+                // Simple simulated reaction-speed/propagation offset:
+                // Since network is lightspeed (via fiber) and sound is slow (340m/s).
+                // To let students measure realistic sound speed, we apply a physical propagation factor.
+                const speedOfSoundUdara = 343; // baseline
+                const targetTimeOffsetMs = (data.distance / speedOfSoundUdara) * 1000;
+
+                // Adjust received time relative to network delay
+                const virtualReceived = tSent + targetTimeOffsetMs;
+                const finalDt = (virtualReceived - tSent) / 1000; // seconds
+                const calculatedSpeedOfSound = data.distance / finalDt;
+
+                // Show UI timing analysis card
+                document.getElementById('sync-analysis-card').classList.remove('hidden');
+                document.getElementById('sync-t1').innerText = `${tSent.toFixed(1)} ms`;
+                document.getElementById('sync-t2').innerText = `${virtualReceived.toFixed(1)} ms`;
+                document.getElementById('sync-dt').innerText = `${finalDt.toFixed(4)} s`;
+                document.getElementById('sync-calc-v').innerText = `${calculatedSpeedOfSound.toFixed(1)} m/s`;
+
+                // Set local variables for journal saving option
+                syncT1 = {
+                    medium: 'Udara (Gema-Sync)',
+                    distance: data.distance,
+                    time: finalDt,
+                    v: calculatedSpeedOfSound
+                };
+            }
+        }
+
+        function saveSyncResultToJournal() {
+            if (!syncT1) return;
+            addRecordToTable(syncT1.medium, syncT1.distance, syncT1.time, syncT1.v);
+            document.getElementById('sync-analysis-card').classList.add('hidden');
+            syncT1 = null;
+        }
+
+
+        /* ==================== JOURNAL PRACTICUM DIGITAL ==================== */
+        let journalEntries = [];
+
+        // Calculate v live as student writes inputs
+        const distIn = document.getElementById('j-distance');
+        const timeIn = document.getElementById('j-time');
+        const vOut = document.getElementById('j-v');
+
+        function autoCalcV() {
+            const s = parseFloat(distIn.value);
+            const t = parseFloat(timeIn.value);
+            if (!isNaN(s) && !isNaN(t) && t > 0) {
+                vOut.value = (s / t).toFixed(1) + " m/s";
+            } else {
+                vOut.value = "";
+            }
+        }
+        distIn.addEventListener('input', autoCalcV);
+        timeIn.addEventListener('input', autoCalcV);
+
+        function addJournalEntryManual(e) {
+            e.preventDefault();
+            const med = document.getElementById('j-medium').value.trim();
+            const s = parseFloat(distIn.value);
+            const t = parseFloat(timeIn.value);
+
+            if (!med || isNaN(s) || isNaN(t) || t <= 0) {
+                showAlertModal("Kesalahan Formulir", "Isi semua kolom form dengan benar.");
+                return;
+            }
+
+            const calculatedV = s / t;
+            addRecordToTable(med, s, t, calculatedV);
+
+            // Reset inputs
+            document.getElementById('journal-form').reset();
+            vOut.value = "";
+        }
+
+        function addRecordToTable(medium, dist, time, speed) {
+            const entry = {
+                id: Date.now(),
+                medium: medium,
+                s: dist,
+                t: time,
+                v: speed
+            };
+
+            journalEntries.push(entry);
+            renderJournalTable();
+        }
+
+        function renderJournalTable() {
+            const tbody = document.getElementById('journal-tbody');
+            tbody.innerHTML = "";
+
+            if (journalEntries.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-4 text-center text-slate-400 italic">Belum ada rekaman laporan praktikum.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            journalEntries.forEach((entry, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = idx % 2 === 0 ? "bg-white" : "bg-slate-50/50";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold">${idx + 1}</td>
+                    <td class="p-2.5 font-semibold text-slate-700">${entry.medium}</td>
+                    <td class="p-2.5 text-right font-mono font-bold">${entry.s} m</td>
+                    <td class="p-2.5 text-right font-mono font-bold">${entry.t.toFixed(4)} s</td>
+                    <td class="p-2.5 text-right font-mono text-emerald-600 font-extrabold">${entry.v.toFixed(1)} m/s</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteJournalRecord(${entry.id})" class="text-rose-500 hover:text-rose-700 transition"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteJournalRecord(id) {
+            journalEntries = journalEntries.filter(record => record.id !== id);
+            renderJournalTable();
+        }
+
+        function clearJournal() {
+            journalEntries = [];
+            renderJournalTable();
+        }
+
+        function exportJournal() {
+            window.print();
+        }
+
+        // Run baseline setup
+        renderJournalTable();
+
+
+        /* ==================== TAB 4: KUIS EVALUASI MANDEIRI ==================== */
+        const quizData = [
+            {
+                question: "1. Mengapa gelombang bunyi dikategorikan sebagai gelombang mekanik longitudinal?",
+                options: [
+                    "A. Karena arah getarannya tegak lurus dengan arah rambatnya.",
+                    "B. Karena arah getarannya sejajar arah rambat dan membutuhkan medium fisik untuk merambat.",
+                    "C. Karena dapat merambat bebas di ruang hampa udara (vakum).",
+                    "D. Karena kecepatannya selalu konstan di segala jenis medium perantara."
+                ],
+                answer: 1, // index B
+                explain: "Tepat! Gelombang mekanik adalah gelombang yang membutuhkan zat perantara (medium), sedangkan longitudinal berarti arah getar partikel mediumnya sejajar arah rambat gelombang."
+            },
+            {
+                question: "2. Suatu bunyi memiliki frekuensi sebesar $15\\text{ Hz}$. Berdasarkan rentang klasifikasi pendengaran manusia, bunyi tersebut tergolong sebagai...",
+                options: [
+                    "A. Infrasonik (tidak terdengar manusia)",
+                    "B. Audiosonik (terdengar jelas)",
+                    "C. Ultrasonik (tidak terdengar manusia)",
+                    "D. Supersonik (melebihi batas kecepatan udara)"
+                ],
+                answer: 0, // index A
+                explain: "Bunyi dengan frekuensi kurang dari $20\\text{ Hz}$ dikelompokkan sebagai infrasonik. Manusia hanya mendengar pada rentang audiosonik ($20\\text{ Hz}$ hingga $20.000\\text{ Hz}$)."
+            },
+            {
+                question: "3. Berdasarkan teori kerapatan molekul zat, medium manakah yang menghantarkan gelombang bunyi dengan kecepatan paling tinggi?",
+                options: [
+                    "A. Gas Nitrogen pada suhu ruangan",
+                    "B. Air Murni (Zat Cair)",
+                    "C. Besi Baja (Zat Padat)",
+                    "D. Ruang Hampa di Luar Angkasa"
+                ],
+                answer: 2, // index C
+                explain: "Partikel pada zat padat (besi baja) tersusun sangat rapat dan berikatan kuat, sehingga deformasi/getaran diteruskan jauh lebih cepat dibanding zat cair dan zat gas."
+            },
+            {
+                question: "4. Sebuah perangkat pengukur jarak memancarkan pulsa bunyi dan mendeteksi pantulannya setelah $0,1\\text{ detik}$. Jika cepat rambat bunyi di udara saat itu $340\\text{ m/s}$, berapakah jarak objek penghalang pemantul tersebut?",
+                options: [
+                    "A. 34 Meter",
+                    "B. 17 Meter",
+                    "C. 68 Meter",
+                    "D. 170 Meter"
+                ],
+                answer: 1, // index B
+                explain: "Hati-hati! Gelombang bunyi merambat bolak-balik: $d = (v \\cdot t)/2$. Maka $d = (340 \\cdot 0.1)/2 = 34 / 2 = 17\\text{ meter}$."
+            },
+            {
+                question: "5. Apa yang terjadi pada frekuensi sirine ambulans yang terdengar oleh pengendara sepeda motor saat ambulans tersebut melaju mendekatinya?",
+                options: [
+                    "A. Frekuensi terdengar lebih rendah karena efek Doppler.",
+                    "B. Frekuensi terdengar lebih tinggi akibat adanya gerak relatif mendekat.",
+                    "C. Frekuensi konstan karena tidak dipengaruhi kecepatan gerak.",
+                    "D. Gelombang bunyi menghilang akibat gelombang longitudinal melemah."
+                ],
+                answer: 1, // index B
+                explain: "Tepat sekali! Sesuai Hukum Efek Doppler, jika sumber bunyi mendekati pendengar, frekuensi yang diterima terdengar lebih tinggi daripada frekuensi aslinya."
+            }
+        ];
+
+        let currentQuizIndex = 0;
+        let selectedAnswers = Array(quizData.length).fill(null);
+        let quizScore = 0;
+
+        function loadQuestion() {
+            const currentQuestion = quizData[currentQuizIndex];
+            document.getElementById('quiz-index-txt').innerText = currentQuizIndex + 1;
+            document.getElementById('quiz-total-txt').innerText = quizData.length;
+            document.getElementById('quiz-question-title').innerText = currentQuestion.question;
+
+            const optList = document.getElementById('quiz-options-list');
+            optList.innerHTML = "";
+
+            currentQuestion.options.forEach((opt, idx) => {
+                const isSelected = selectedAnswers[currentQuizIndex] === idx;
+                
+                const btn = document.createElement('button');
+                btn.onclick = () => selectQuizOption(idx);
+                btn.className = `w-full text-left p-3.5 rounded-xl border-2 text-[11px] font-bold transition flex items-center justify-between group ${
+                    isSelected 
+                    ? 'border-brand-blue bg-blue-50/50 text-brand-blue' 
+                    : 'border-slate-100 bg-slate-50/50 text-slate-600 hover:border-slate-300'
+                }`;
+                btn.innerHTML = `
+                    <span>${opt}</span>
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] text-white ${
+                        isSelected ? 'bg-brand-blue border-brand-blue' : 'group-hover:border-slate-400'
+                    }">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                `;
+                optList.appendChild(btn);
+            });
+
+            // Handle prev/next button status visibility
+            document.getElementById('btn-quiz-prev').style.visibility = currentQuizIndex === 0 ? 'hidden' : 'visible';
+            
+            if (currentQuizIndex === quizData.length - 1) {
+                document.getElementById('btn-quiz-next').classList.add('hidden');
+                document.getElementById('btn-quiz-submit').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-quiz-next').classList.remove('hidden');
+                document.getElementById('btn-quiz-submit').classList.add('hidden');
+            }
+
+            // Hide or show explanation box if question was already answered
+            const feedbackBox = document.getElementById('quiz-feedback-box');
+            if (selectedAnswers[currentQuizIndex] !== null) {
+                showQuizExplanation();
+            } else {
+                feedbackBox.classList.add('hidden');
+            }
+
+            // Render LaTeX dynamically inside equations
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        function selectQuizOption(optionIdx) {
+            selectedAnswers[currentQuizIndex] = optionIdx;
+            
+            // Recalculate score live
+            calculateLiveScore();
+            
+            // Reload question to show selected style & show explanation instantly
+            loadQuestion();
+        }
+
+        function calculateLiveScore() {
+            let correctCount = 0;
+            selectedAnswers.forEach((ans, idx) => {
+                if (ans === quizData[idx].answer) {
+                    correctCount++;
+                }
+            });
+            quizScore = Math.round((correctCount / quizData.length) * 100);
+            document.getElementById('quiz-score-txt').innerText = quizScore;
+        }
+
+        function showQuizExplanation() {
+            const feedbackBox = document.getElementById('quiz-feedback-box');
+            const currentQuestion = quizData[currentQuizIndex];
+            const chosen = selectedAnswers[currentQuizIndex];
+            const correct = currentQuestion.answer;
+
+            feedbackBox.classList.remove('hidden');
+
+            if (chosen === correct) {
+                feedbackBox.className = "p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-[11px] leading-relaxed";
+                feedbackBox.innerHTML = `
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-circle-check text-base shrink-0 mt-0.5 text-emerald-600"></i>
+                        <div>
+                            <span class="font-extrabold uppercase">Benar!</span>
+                            <p class="mt-1">${currentQuestion.explain}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                feedbackBox.className = "p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-[11px] leading-relaxed";
+                feedbackBox.innerHTML = `
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-circle-xmark text-base shrink-0 mt-0.5 text-rose-600"></i>
+                        <div>
+                            <span class="font-extrabold uppercase">Kurang Tepat</span>
+                            <p class="mt-1">Pilihan Anda salah. Jawaban yang tepat adalah: <strong>${currentQuestion.options[correct]}</strong>.</p>
+                            <p class="mt-2 text-slate-500 italic border-t border-rose-200/50 pt-1">${currentQuestion.explain}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function navigateQuiz(dir) {
+            currentQuizIndex += dir;
+            loadQuestion();
+        }
+
+        function finishQuiz() {
+            // Check if there are unanswered questions
+            const unanswered = selectedAnswers.includes(null);
+            if (unanswered) {
+                showAlertModal("Kuis Belum Lengkap", "Harap isi semua pertanyaan kuis terlebih dahulu.");
+                return;
+            }
+
+            // Hide quiz box, show summary result splash card
+            document.getElementById('quiz-container').classList.add('hidden');
+            
+            const resultSplash = document.getElementById('quiz-result-splash');
+            resultSplash.classList.remove('hidden');
+
+            document.getElementById('quiz-final-score').innerText = quizScore;
+
+            // Generate nice evaluation text based on final score
+            const feedbackText = document.getElementById('quiz-evaluation-feedback');
+            if (quizScore === 100) {
+                feedbackText.innerText = "Sempurna! Anda berhasil menjawab semua tantangan gelombang bunyi dengan sangat baik. Anda siap menjadi mentor fisika kelas!";
+            } else if (quizScore >= 80) {
+                feedbackText.innerText = "Sangat Bagus! Penguasaan materi Anda di atas rata-rata kelompok. Pertahankan ketelitian Anda dalam memahami fenomena bunyi.";
+            } else if (quizScore >= 60) {
+                feedbackText.innerText = "Cukup Bagus. Anda sudah menguasai konsep dasar perambatan gelombang, namun disarankan untuk membaca kembali bab pembiasan dan medium.";
+            } else {
+                feedbackText.innerText = "Tingkatkan Belajar. Baca kembali rangkuman materi, gunakan fitur kalkulator interaktif, dan ulangi kuis ini untuk meningkatkan pemahaman Anda.";
+            }
+        }
+
+        function restartQuiz() {
+            currentQuizIndex = 0;
+            selectedAnswers = Array(quizData.length).fill(null);
+            quizScore = 0;
+            document.getElementById('quiz-score-txt').innerText = "0";
+            
+            document.getElementById('quiz-result-splash').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        // Trigger first quiz display on page loading
+        loadQuestion();
+
+
+        /* ==================== RESIZING & GENERAL SETUP ==================== */
+        window.addEventListener('resize', () => {
+            const currentTab = document.querySelector('.tab-content.active');
+            if (currentTab && currentTab.id === 'tab-simulasi') {
+                initWaveCanvas();
+            }
+        });
+
+        // Autoload tab simulation canvas on load
+        window.onload = function() {
+            // Setup controls baseline values
+            updateSimulationControls();
+        };
+    </script>
+</body>
+</html>
